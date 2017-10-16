@@ -60,22 +60,27 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     # TODO: Implement function
     fcn = tf.layers.conv2d(vgg_layer7_out, 2048, 1, strides=1, padding='same',
                            kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
+    fcn = tf.layers.batch_normalization(fcn, training=True)
     #d1 = tf.layers.conv2d_transpose(fcn, 2048, 4, strides=2, padding='same', activation=tf.nn.elu,
     #                                kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
     #d2 = tf.layers.conv2d_transpose(d1, 1024, 4, strides=2, padding='same', activation=tf.nn.elu,
     #                                kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
     d3 = tf.layers.conv2d_transpose(fcn, 512, 4, strides=2, padding='same',
                                     kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
+    d3 = tf.layers.batch_normalization(d3, training=True)
     d3 = tf.add(d3, vgg_layer4_out)
 
     d4 = tf.layers.conv2d_transpose(d3, 256, 4, strides=2, padding='same',
                                     kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
+    d4 = tf.layers.batch_normalization(d4, training=True)
     d4 = tf.add(d4, vgg_layer3_out)
 
-    d5 = tf.layers.conv2d_transpose(d4, 128, 4, strides=2, padding='same',
-                                    kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
+    #d5 = tf.layers.conv2d_transpose(d4, 128, 4, strides=2, padding='same',
+    #                                kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
+    #d5 = tf.layers.batch_normalization(d5, training=True)
     d6 = tf.layers.conv2d_transpose(d4, num_classes, 16, strides=8, padding='same',
                                     kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
+    d6 = tf.layers.batch_normalization(d6, training=True)
 
     return d6
 tests.test_layers(layers)
@@ -125,7 +130,7 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     for epoch in range(epochs):
         for images, labels in get_batches_fn(batch_size):
             _, loss = sess.run([train_op, cross_entropy_loss],
-                               feed_dict={input_image: images, correct_label: labels, keep_prob: 1.0, learning_rate:0.005})
+                               feed_dict={input_image: images, correct_label: labels, keep_prob: 1.0, learning_rate:0.0001})
 
         print('Epoch {:>2}, loss: {}  '.format(epoch + 1, loss), end='')
         print()
@@ -134,7 +139,7 @@ tests.test_train_nn(train_nn)
 
 
 def run():
-    epochs = 5
+    epochs = 20
     batch_size = 16
     num_classes = 2
     image_shape = (160, 576)
@@ -153,6 +158,7 @@ def run():
     shape = (None,) + image_shape + (num_classes,)
     print(shape)
     correct_label = tf.placeholder(tf.float32, shape)
+    #keep_prob = tf.placeholder(tf.float32)
 
     with tf.Session() as sess:
 
@@ -166,18 +172,18 @@ def run():
         #  https://datascience.stackexchange.com/questions/5224/how-to-prepare-augment-images-for-neural-network
 
         # TODO: Build NN using load_vgg, layers, and optimize function
-        vgg_input, vgg_keep_prob, vgg_layer3, vgg_layer4, vgg_layer7 = load_vgg(sess, vgg_path)
+        input_image, keep_prob, vgg_layer3, vgg_layer4, vgg_layer7 = load_vgg(sess, vgg_path)
 
         nn_last_layer = layers(vgg_layer3, vgg_layer4, vgg_layer7, num_classes)
 
         logits, optimizer, cross_entropy_loss = optimize(nn_last_layer, correct_label, learning_rate, num_classes)
 
         # TODO: Train NN using the train_nn function
-        train_nn(sess, epochs, batch_size, get_batches_fn, optimizer, cross_entropy_loss, vgg_input,
-                 correct_label, vgg_keep_prob, learning_rate)
+        train_nn(sess, epochs, batch_size, get_batches_fn, optimizer, cross_entropy_loss, input_image,
+                 correct_label, keep_prob, learning_rate)
 
         # TODO: Save inference data using helper.save_inference_samples
-        #  helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
+        helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
 
         # OPTIONAL: Apply the trained model to a video
 
