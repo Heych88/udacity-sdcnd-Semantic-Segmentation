@@ -61,7 +61,6 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     :return: The Tensor for the last layer of output
     """
     # TODO: Implement function
-    alpha = 0.1
 
     fcn = tf.layers.conv2d(vgg_layer7_out, 4096, 1, strides=1, padding='same', use_bias=False,
                            kernel_initializer=tf.truncated_normal_initializer(stddev=0.1),
@@ -151,20 +150,22 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     sess.run(tf.global_variables_initializer())
     sess.run(tf.local_variables_initializer())
 
+    step = 0
     # TODO: Implement function
     for epoch in range(epochs):
         for images, labels in get_batches_fn(batch_size):
             _, loss = sess.run([train_op, cross_entropy_loss],
                                feed_dict={input_image: images, correct_label: labels, keep_prob: 1.0, learning_rate:0.00025})
 
-        print('Epoch {:>2}, loss: {}  '.format(epoch + 1, loss))
+            step += 1
+            print('Epoch {:>2}, step: {}, loss: {}  '.format(epoch + 1, step, loss))
 
 
 tests.test_train_nn(train_nn)
 
 
 def run(image_shape, train_data, val_data):
-    epochs = 5
+    epochs = 1
     batch_size = 10
     num_classes = 3
 
@@ -189,7 +190,7 @@ def run(image_shape, train_data, val_data):
         # Path to vgg model
         vgg_path = os.path.join(data_dir, 'vgg')
         # Create function to get batches
-        get_batches_fn = helper.gen_batch_function(train_data, image_shape)
+        get_batches_fn = helper.gen_batch_function(train_data, image_shape, num_classes)
 
         # OPTIONAL: Augment Images for better results
         #  https://datascience.stackexchange.com/questions/5224/how-to-prepare-augment-images-for-neural-network
