@@ -6,8 +6,7 @@ from distutils.version import LooseVersion
 import project_tests as tests
 
 import process_data
-
-import scoring_utils
+from sklearn.model_selection import train_test_split
 
 tf.GraphKeys.VARIABLES = tf.GraphKeys.GLOBAL_VARIABLES
 
@@ -164,7 +163,7 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
 tests.test_train_nn(train_nn)
 
 
-def run(image_shape):
+def run(image_shape, train_data, val_data):
     epochs = 5
     batch_size = 10
     num_classes = 3
@@ -190,7 +189,7 @@ def run(image_shape):
         # Path to vgg model
         vgg_path = os.path.join(data_dir, 'vgg')
         # Create function to get batches
-        get_batches_fn = helper.gen_batch_function(os.path.join(data_dir, 'data_road/training'), image_shape)
+        get_batches_fn = helper.gen_batch_function(train_data, image_shape)
 
         # OPTIONAL: Augment Images for better results
         #  https://datascience.stackexchange.com/questions/5224/how-to-prepare-augment-images-for-neural-network
@@ -220,6 +219,9 @@ if __name__ == '__main__':
 
     image_shape = (160, 576)
 
-    train_img_list, train_gt_img_list = process_data.getData(image_shape)
+    print('Collecting Data')
+    train_img_list = process_data.getData(image_shape)
+    train_data, val_data = train_test_split(train_img_list, test_size=0.15)
+    print('Finished collecting Data')
 
-    #run()
+    run(image_shape, train_data, val_data)
