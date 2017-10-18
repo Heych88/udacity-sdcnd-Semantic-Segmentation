@@ -5,6 +5,8 @@ import warnings
 from distutils.version import LooseVersion
 import project_tests as tests
 
+import process_data
+
 import scoring_utils
 
 tf.GraphKeys.VARIABLES = tf.GraphKeys.GLOBAL_VARIABLES
@@ -162,11 +164,11 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
 tests.test_train_nn(train_nn)
 
 
-def run():
+def run(image_shape):
     epochs = 5
     batch_size = 10
-    num_classes = 2
-    image_shape = (160, 576)
+    num_classes = 3
+
     data_dir = './data'
     runs_dir = './runs'
     tests.test_for_kitti_dataset(data_dir)
@@ -215,4 +217,9 @@ def run():
 
 
 if __name__ == '__main__':
-    run()
+
+    image_shape = (160, 576)
+
+    train_img_list, train_gt_img_list = process_data.getData(image_shape)
+
+    #run()
