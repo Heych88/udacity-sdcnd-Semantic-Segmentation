@@ -78,7 +78,7 @@ def gen_batch_function(img_data, image_shape, num_classes):
             batch_samples = shuf_img[offset:offset + batch_size]
             images = []
             gt_images = []
-            #for image_file in shuf_img:
+
             for image_file in batch_samples:
 
                 image = scipy.misc.imread(image_file[0])
@@ -86,7 +86,7 @@ def gen_batch_function(img_data, image_shape, num_classes):
 
                 # convert the gt_image label to onehot encodding
                 #https://stackoverflow.com/questions/36960320/convert-a-2d-matrix-to-a-3d-one-hot-matrix-numpy
-                one_hot = (np.arange(gt_image.max()) == gt_image[:, :, None] - 1).astype(int)
+                one_hot = (np.arange(num_classes) == gt_image[:, :, None] - 1).astype(int)
 
                 images.append(image)
                 gt_images.append(one_hot)
