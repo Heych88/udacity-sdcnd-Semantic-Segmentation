@@ -62,50 +62,50 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     """
     # TODO: Implement function
 
-    fcn = tf.layers.conv2d(vgg_layer7_out, 4096, 1, strides=1, padding='same', use_bias=False,
+    fcn = tf.layers.conv2d(vgg_layer7_out, 4096, 1, strides=1, padding='same', use_bias=False, name='conv_1',
                            kernel_initializer=tf.truncated_normal_initializer(stddev=0.1),
                            kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
-    fcn = tf.layers.batch_normalization(fcn, training=True)
+    fcn = tf.layers.batch_normalization(fcn, training=True, name='batch_1')
 
-    d3 = tf.layers.conv2d_transpose(fcn, 512, 3, strides=2, padding='same', use_bias=False,
+    x = tf.layers.conv2d_transpose(fcn, 512, 3, strides=2, padding='same', use_bias=False, name='conv_2',
                                     kernel_initializer=tf.truncated_normal_initializer(stddev=0.1),
                                     kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
-    d3 = tf.layers.batch_normalization(d3, training=True)
-    d3 = tf.layers.conv2d(d3, 512, 1, strides=1, padding='same', use_bias=False,
+    x = tf.layers.batch_normalization(x, training=True, name='batch_2')
+    x = tf.layers.conv2d(x, 512, 1, strides=1, padding='same', use_bias=False, name='conv_3',
                           kernel_initializer=tf.truncated_normal_initializer(stddev=0.1),
                           kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
-    d3 = tf.layers.batch_normalization(d3, training=True)
-    d3 = tf.add(d3, vgg_layer4_out)
+    x = tf.layers.batch_normalization(x, training=True, name='batch_3')
+    x = tf.add(x, vgg_layer4_out)
 
-    d4 = tf.layers.conv2d(d3, 512, 1, strides=1, padding='same', use_bias=False,
+    x = tf.layers.conv2d(x, 512, 1, strides=1, padding='same', use_bias=False, name='conv_4',
                           kernel_initializer=tf.truncated_normal_initializer(stddev=0.1),
                           kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
-    d4 = tf.layers.batch_normalization(d4, training=True)
-    d4 = tf.layers.conv2d_transpose(d4, 256, 3, strides=2, padding='same', use_bias=False,
+    x = tf.layers.batch_normalization(x, training=True, name='batch_4')
+    x = tf.layers.conv2d_transpose(x, 256, 3, strides=2, padding='same', use_bias=False, name='conv_5',
                                     kernel_initializer=tf.truncated_normal_initializer(stddev=0.1),
                                     kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
-    d4 = tf.layers.batch_normalization(d4, training=True)
-    d4 = tf.layers.conv2d(d4, 256, 1, strides=1, padding='same', use_bias=False,
+    x = tf.layers.batch_normalization(x, training=True, name='batch_5')
+    x = tf.layers.conv2d(x, 256, 1, strides=1, padding='same', use_bias=False, name='conv_6',
                           kernel_initializer=tf.truncated_normal_initializer(stddev=0.1),
                           kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
-    d4 = tf.layers.batch_normalization(d4, training=True)
-    d4 = tf.add(d4, vgg_layer3_out)
+    x = tf.layers.batch_normalization(x, training=True, name='batch_6')
+    x = tf.add(x, vgg_layer3_out)
 
-    d5 = tf.layers.conv2d(d4, 64, 1, strides=1, padding='same', use_bias=False,
+    x = tf.layers.conv2d(x, 64, 1, strides=1, padding='same', use_bias=False, name='conv_7',
                           kernel_initializer=tf.truncated_normal_initializer(stddev=0.1),
                           kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
-    d5 = tf.layers.batch_normalization(d5, training=True)
-    d5 = tf.layers.conv2d_transpose(d5, num_classes, 16, strides=8, padding='same',
+    x = tf.layers.batch_normalization(x, training=True, name='batch_7')
+    x = tf.layers.conv2d_transpose(x, num_classes, 16, strides=8, padding='same', name='conv_8',
                                     kernel_initializer=tf.truncated_normal_initializer(stddev=0.1),
                                     kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
-    d5 = tf.layers.batch_normalization(d5, training=True)
+    x = tf.layers.batch_normalization(x, training=True, name='batch_8')
 
-    d6 = tf.layers.conv2d(d5, num_classes, 1, strides=1, padding='same', use_bias=False,
+    x = tf.layers.conv2d(x, num_classes, 1, strides=1, padding='same', use_bias=False, name='conv_9',
                           kernel_initializer=tf.truncated_normal_initializer(stddev=0.1),
                           kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
-    # d6 = tf.layers.batch_normalization(d6, training=True)
+    # x = tf.layers.batch_normalization(d6, training=True, name='batch_9')
 
-    return d6
+    return x
 tests.test_layers(layers)
 
 
@@ -149,23 +149,20 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     sess.run(tf.global_variables_initializer())
     sess.run(tf.local_variables_initializer())
 
-
-    # TODO: Implement function
     for epoch in range(epochs):
-        step = 0
+        batch = 0
         for images, labels in get_batches_fn(batch_size):
             _, loss = sess.run([train_op, cross_entropy_loss],
                                feed_dict={input_image: images, correct_label: labels, keep_prob: 1.0, learning_rate:0.00025})
 
-            step += 1
-            print('Epoch {:>2}, step: {}, loss: {}  '.format(epoch + 1, step, loss))
-
+            batch += 1
+            print('Epoch {:>2}, step: {}, loss: {}  '.format(epoch + 1, batch, loss))
 
 tests.test_train_nn(train_nn)
 
 
 def run(image_shape, train_data, val_data):
-    epochs = 3
+    epochs = 1
     batch_size = 10
     num_classes = 3
 
@@ -202,18 +199,24 @@ def run(image_shape, train_data, val_data):
 
         logits, optimizer, cross_entropy_loss = optimize(nn_last_layer, correct_label, learning_rate, num_classes)
 
+        saver = tf.train.Saver()
+        save_model_path = './model/semantic_segmentation_model'
+        #checkpoints_dir = './model/model.ckpt'
+        #print("Loading last checkpoint")
+        #saver.restore(sess, checkpoints_dir)
+
         # TODO: Train NN using the train_nn function
         train_nn(sess, epochs, batch_size, get_batches_fn, optimizer, cross_entropy_loss, input_image,
                  correct_label, keep_prob, learning_rate)
+
+        # save the trained model
+        saver.save(sess, save_model_path)
+        print("Model saved")
 
         # TODO: Save inference data using helper.save_inference_samples
         helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
 
         # OPTIONAL: Apply the trained model to a video
-
-        #print(tf.contrib.layers.flatten(correct_label))
-        #print(tf.contrib.layers.flatten(input_image))
-        #tf.metrics.mean_iou()
 
 
 if __name__ == '__main__':
