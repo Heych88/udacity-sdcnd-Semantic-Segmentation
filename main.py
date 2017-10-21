@@ -66,12 +66,8 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
                            kernel_initializer=tf.truncated_normal_initializer(stddev=0.1),
                            kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
     fcn = tf.layers.batch_normalization(fcn, training=True)
-    fcn = tf.layers.conv2d(fcn, 2046, 3, strides=1, padding='same', use_bias=False,
-                           kernel_initializer=tf.truncated_normal_initializer(stddev=0.1),
-                           kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
-    fcn = tf.layers.batch_normalization(fcn, training=True)
 
-    d3 = tf.layers.conv2d_transpose(fcn, 1024, 3, strides=2, padding='same', use_bias=False,
+    d3 = tf.layers.conv2d_transpose(fcn, 512, 3, strides=2, padding='same', use_bias=False,
                                     kernel_initializer=tf.truncated_normal_initializer(stddev=0.1),
                                     kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
     d3 = tf.layers.batch_normalization(d3, training=True)
@@ -81,13 +77,17 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     d3 = tf.layers.batch_normalization(d3, training=True)
     d3 = tf.add(d3, vgg_layer4_out)
 
-    d4 = tf.layers.conv2d_transpose(d3, 256, 3, strides=2, padding='same', use_bias=False,
+    d4 = tf.layers.conv2d(d3, 512, 1, strides=1, padding='same', use_bias=False,
+                          kernel_initializer=tf.truncated_normal_initializer(stddev=0.1),
+                          kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
+    d4 = tf.layers.batch_normalization(d4, training=True)
+    d4 = tf.layers.conv2d_transpose(d4, 256, 3, strides=2, padding='same', use_bias=False,
                                     kernel_initializer=tf.truncated_normal_initializer(stddev=0.1),
                                     kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
     d4 = tf.layers.batch_normalization(d4, training=True)
     d4 = tf.layers.conv2d(d4, 256, 1, strides=1, padding='same', use_bias=False,
                           kernel_initializer=tf.truncated_normal_initializer(stddev=0.1),
-                       kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
+                          kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
     d4 = tf.layers.batch_normalization(d4, training=True)
     d4 = tf.add(d4, vgg_layer3_out)
 
@@ -95,16 +95,15 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
                           kernel_initializer=tf.truncated_normal_initializer(stddev=0.1),
                           kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
     d5 = tf.layers.batch_normalization(d5, training=True)
-
-    d6 = tf.layers.conv2d_transpose(d5, num_classes, 16, strides=8, padding='same',
+    d5 = tf.layers.conv2d_transpose(d5, num_classes, 16, strides=8, padding='same',
                                     kernel_initializer=tf.truncated_normal_initializer(stddev=0.1),
                                     kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
-    d6 = tf.layers.batch_normalization(d6, training=True)
+    d5 = tf.layers.batch_normalization(d5, training=True)
 
-    #d7 = tf.layers.conv2d(d6, num_classes, 1, strides=1, padding='same', use_bias=False,
-    #                      kernel_initializer=tf.truncated_normal_initializer(stddev=0.1),
-    #                      kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
-    #d7 = tf.layers.batch_normalization(d7, training=True)
+    d6 = tf.layers.conv2d(d5, num_classes, 1, strides=1, padding='same', use_bias=False,
+                          kernel_initializer=tf.truncated_normal_initializer(stddev=0.1),
+                          kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
+    # d6 = tf.layers.batch_normalization(d6, training=True)
 
     return d6
 tests.test_layers(layers)
