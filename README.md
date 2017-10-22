@@ -5,7 +5,7 @@ This repository contains the project solution to Udacities Self-Driving Car ND s
 
 The project takes image data and performs Semantic Segmentation to label the pixels of a road in images using a Fully Convolutional Network (FCN).
 
-![Test set 3](runs/10 epoch .007 loss/um_000005.png)
+![Test set 3](runs/10_epoch_0.007_loss/um_000005.png)
 
 ### Setup
 ##### Install Dependencies
