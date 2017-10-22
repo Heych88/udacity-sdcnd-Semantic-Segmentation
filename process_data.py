@@ -16,20 +16,20 @@ image_pad_val = 255 # value given to the un-imaged area of the shifted pre-proce
 
 max_dist = 0    # max pixel distance to shift pre-processed image and ground truth
 
-def mapLabel(data):
+def mapLabel(gt_image):
     '''
     Maps ground truth to training label ground truth. Original from
     https://stackoverflow.com/questions/13572448/change-values-in-a-numpy-array
-    :param data:
-    :return:
+    :param gt_image: ground truth to be mapped
+    :return: the mapped ground truth
     '''
     # palette must be given in sorted order
     palette = [other_road_val, no_road_val, road_val, image_pad_val]
     # key gives the new values you wish palette to be mapped to.
     key = np.array([2, 1, 2, 0])
-    index = np.digitize(data.ravel(), palette, right=True)
+    index = np.digitize(gt_image.ravel(), palette, right=True)
 
-    return np.array(key[index].reshape(data.shape))
+    return np.array(key[index].reshape(gt_image.shape))
 
 def translate_image(image, gt_img, file_name, new_file_name, image_shape, gamma_min=10, gamma_max=10,
                     gamma_step=2, distance=0, distance_step=20):
@@ -51,6 +51,8 @@ def translate_image(image, gt_img, file_name, new_file_name, image_shape, gamma_
     rows = image_shape[0]
     cols = image_shape[1]
     address_list = [] # address list of the new training images
+    first_image = True
+    first_gt_img_file_name = None
 
     gamma_min = int(np.minimum(np.maximum(gamma_min, 1), 100)) # clip value between 1 and 100
     gamma_max = int(np.minimum(np.maximum(gamma_max, gamma_min), 100)) # clip value between gamma_min and 100
@@ -71,11 +73,15 @@ def translate_image(image, gt_img, file_name, new_file_name, image_shape, gamma_
         img_file_name = output_dir + name_split[0] + new_file_name + '_bright_' + str(gamma) +".png"
         cv2.imwrite(img_file_name, img)
 
-        gt_img_file_name = output_dir + 'gt_' + name_split[0] + new_file_name + '_bright_' + str(gamma) + ".png"
-        new_gt_img = mapLabel(gt_img) # map ground truths to training labels
-        cv2.imwrite(gt_img_file_name, new_gt_img)
+        if first_image:
+            # only create one ground truth image for every gamma adjustment to save memory
+            first_gt_img_file_name = output_dir + 'gt_' + name_split[0] + new_file_name + '_bright_' + str(gamma) + ".png"
+            new_gt_img = mapLabel(gt_img) # map ground truths to training labels
+            cv2.imwrite(first_gt_img_file_name, new_gt_img)
 
-        address_list.append([img_file_name, gt_img_file_name])
+            first_image = False
+
+        address_list.append([img_file_name, first_gt_img_file_name])
 
         # add step to include the distance in the image transform
         # below has been copied from my 'behavioural cloning project'
@@ -147,16 +153,16 @@ def getData(image_shape):
 
             # translate the input images into the data folder
             address_list.extend(translate_image(img, gt_img, file_name, "normal", image_shape,
-                                                 distance=max_dist, distance_step=50))
+                                                gamma_min=4, gamma_max=20, distance=max_dist))
             # translate the  input images horizontally and flipped
-            address_list.extend(translate_image(cv2.flip(img, 1), cv2.flip(gt_img, 1), file_name,
-                                                 "horz_flip", image_shape, distance=max_dist, distance_step=50))
+            address_list.extend(translate_image(cv2.flip(img, 1), cv2.flip(gt_img, 1), file_name, "horz_flip",
+                                                image_shape, gamma_min=4, gamma_max=20, distance=max_dist))
             # translate vertically flipped
-            address_list.extend(translate_image(cv2.flip(img, 0), cv2.flip(gt_img, 0), file_name,
-                                                 "vert_flip", image_shape, distance=max_dist, distance_step=50))
+            #address_list.extend(translate_image(cv2.flip(img, 0), cv2.flip(gt_img, 0), file_name, "vert_flip",
+            #                                    image_shape, gamma_min=4, gamma_max=20, distance=max_dist))
             # translate the horizontally and vertically flipped input images
-            address_list.extend(translate_image(cv2.flip(img, -1), cv2.flip(gt_img, -1), file_name,
-                                                 "vert_horz_flip", image_shape, distance=max_dist, distance_step=50))
+            #address_list.extend(translate_image(cv2.flip(img, -1), cv2.flip(gt_img, -1), file_name, "vert_horz_flip",
+            #                                    image_shape, gamma_min=4, gamma_max=20, distance=max_dist))
 
         # save the address list of each image to prevent remaking the same images
         # delete the 'xxxx_list.p' file, in saved_file_dir to rebuild new images
