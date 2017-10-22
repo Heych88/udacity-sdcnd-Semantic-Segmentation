@@ -1,5 +1,3 @@
-import re
-import random
 import numpy as np
 import os.path
 import scipy.misc
@@ -84,7 +82,7 @@ def gen_batch_function(img_data, image_shape, num_classes):
                 image = scipy.misc.imread(image_file[0])
                 gt_image = scipy.misc.imread(image_file[1])
 
-                # convert the gt_image label to onehot encodding
+                # convert the gt_image label to onehot encoding
                 #https://stackoverflow.com/questions/36960320/convert-a-2d-matrix-to-a-3d-one-hot-matrix-numpy
                 one_hot = (np.arange(num_classes) == gt_image[:, :, None] - 1).astype(int)
 
@@ -114,6 +112,7 @@ def gen_test_output(sess, logits, keep_prob, image_pl, data_folder, image_shape)
             [tf.nn.softmax(logits)],
             {keep_prob: 1.0, image_pl: [image]})
         im_softmax = im_softmax[0][:, 1].reshape(image_shape[0], image_shape[1])
+        # predictions over 0.5 are considered the road
         segmentation = (im_softmax > 0.5).reshape(image_shape[0], image_shape[1], 1)
         mask = np.dot(segmentation, np.array([[0, 255, 0, 127]]))
         mask = scipy.misc.toimage(mask, mode="RGBA")
@@ -124,6 +123,17 @@ def gen_test_output(sess, logits, keep_prob, image_pl, data_folder, image_shape)
 
 
 def save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image):
+    """
+    Tests the model prediction and saves the tested images to file.
+    :param runs_dir:
+    :param data_dir:
+    :param sess:
+    :param image_shape:
+    :param logits:
+    :param keep_prob:
+    :param input_image:
+    :return:
+    """
     # Make folder for current run
     output_dir = os.path.join(runs_dir, str(time.time()))
     if os.path.exists(output_dir):
@@ -131,8 +141,9 @@ def save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_p
     os.makedirs(output_dir)
 
     # Run NN on test images and save them to HD
-    print('Training Finished. Saving test images to: {}'.format(output_dir))
+    print('Training Finished. Saving test images ...')
     image_outputs = gen_test_output(
         sess, logits, keep_prob, input_image, os.path.join(data_dir, 'data_road/testing'), image_shape)
     for name, image in image_outputs:
         scipy.misc.imsave(os.path.join(output_dir, name), image)
+    print('Test images saved to: {}'.format(output_dir))

@@ -5,7 +5,7 @@ import warnings
 from distutils.version import LooseVersion
 import project_tests as tests
 
-import process_data
+import process_data # loads and pre-processes the training and ground truth data
 from sklearn.model_selection import train_test_split
 
 tf.GraphKeys.VARIABLES = tf.GraphKeys.GLOBAL_VARIABLES
@@ -81,7 +81,7 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
                           kernel_initializer=tf.truncated_normal_initializer(stddev=0.1),
                           kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
     x = tf.layers.batch_normalization(x, training=True, name='batch_4')
-    x = tf.layers.conv2d_transpose(x, 256, 3, strides=2, padding='same', use_bias=False, name='conv_5',
+    x = tf.layers.conv2d_transpose(x, 256, 7, strides=2, padding='same', use_bias=False, name='conv_5',
                                     kernel_initializer=tf.truncated_normal_initializer(stddev=0.1),
                                     kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
     x = tf.layers.batch_normalization(x, training=True, name='batch_5')
@@ -103,8 +103,6 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     x = tf.layers.conv2d(x, num_classes, 1, strides=1, padding='same', use_bias=False, name='conv_9',
                           kernel_initializer=tf.truncated_normal_initializer(stddev=0.1),
                           kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
-    # x = tf.layers.batch_normalization(d6, training=True, name='batch_9')
-
     return x
 tests.test_layers(layers)
 
@@ -118,14 +116,11 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
     :param num_classes: Number of classes to classify
     :return: Tuple of (logits, train_op, cross_entropy_loss)
     """
-    # TODO: Implement function
     logits = tf.reshape(nn_last_layer, (-1, num_classes))
     cross_entropy_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=correct_label))
 
     loss = tf.reduce_mean(cross_entropy_loss)
-
     optimizer = tf.train.AdamOptimizer(learning_rate).minimize(loss)
-
 
     return logits, optimizer, cross_entropy_loss
 tests.test_optimize(optimize)
@@ -147,65 +142,68 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     :param learning_rate: TF Placeholder for learning rate
     """
     sess.run(tf.global_variables_initializer())
-    sess.run(tf.local_variables_initializer())
+    #sess.run(tf.local_variables_initializer())
 
     for epoch in range(epochs):
         batch = 0
         for images, labels in get_batches_fn(batch_size):
             _, loss = sess.run([train_op, cross_entropy_loss],
                                feed_dict={input_image: images, correct_label: labels, keep_prob: 1.0, learning_rate:0.00025})
-
             batch += 1
             print('Epoch {:>2}, step: {}, loss: {}  '.format(epoch + 1, batch, loss))
 
 tests.test_train_nn(train_nn)
 
 
-def run(image_shape, train_data, val_data):
-    epochs = 1
+def run():
+    """
+    Collects the data and pre-processes the images, loads the pre-trained vgg-model and trains the semantic
+    segmentation decoder network on the data and test the trained model.
+    :return: Nothing
+    """
+    epochs = 3
     batch_size = 10
     num_classes = 3
+    image_shape = (160, 576)
 
     data_dir = './data/'
     runs_dir = './runs'
     tests.test_for_kitti_dataset(data_dir)
 
-    # Download pretrained vgg model
+    print('Collecting Data')
+    # pre-process the images to create more training data
+    img_list = process_data.getData(image_shape)
+    train_data, val_data = train_test_split(img_list, test_size=0.0)
+    print('Finished collecting Data')
+
+    # Download the pre-trained vgg model
     helper.maybe_download_pretrained_vgg(data_dir)
 
-    # OPTIONAL: Train and Inference on the cityscapes dataset instead of the Kitti dataset.
-    # You'll need a GPU with at least 10 teraFLOPS to train on.
-    #  https://www.cityscapes-dataset.com/
-
+    # create the NN placeholders
     learning_rate = tf.placeholder(tf.float32, name='learning_rate')
     shape = (None,) + image_shape + (num_classes,)
     correct_label = tf.placeholder(tf.float32, shape)
     #keep_prob = tf.placeholder(tf.float32)
 
     with tf.Session() as sess:
-
         # Path to vgg model
         vgg_path = os.path.join(data_dir, 'vgg')
         # Create function to get batches
         get_batches_fn = helper.gen_batch_function(train_data, image_shape, num_classes)
 
-        # OPTIONAL: Augment Images for better results
-        #  https://datascience.stackexchange.com/questions/5224/how-to-prepare-augment-images-for-neural-network
-
-        # TODO: Build NN using load_vgg, layers, and optimize function
+        # Build NN using load_vgg, layers, and optimize function
         input_image, keep_prob, vgg_layer3, vgg_layer4, vgg_layer7 = load_vgg(sess, vgg_path)
 
+        # load the pre-trained vgg network
         nn_last_layer = layers(vgg_layer3, vgg_layer4, vgg_layer7, num_classes)
 
+        # setup the NN training optimizer
         logits, optimizer, cross_entropy_loss = optimize(nn_last_layer, correct_label, learning_rate, num_classes)
 
         saver = tf.train.Saver()
-        save_model_path = './model/semantic_segmentation_model'
-        #checkpoints_dir = './model/model.ckpt'
-        #print("Loading last checkpoint")
-        #saver.restore(sess, checkpoints_dir)
+        save_model_path = './model/semantic_segmentation_model.ckpt'
 
-        # TODO: Train NN using the train_nn function
+        # Train the NN
         train_nn(sess, epochs, batch_size, get_batches_fn, optimizer, cross_entropy_loss, input_image,
                  correct_label, keep_prob, learning_rate)
 
@@ -213,19 +211,11 @@ def run(image_shape, train_data, val_data):
         saver.save(sess, save_model_path)
         print("Model saved")
 
-        # TODO: Save inference data using helper.save_inference_samples
+        # Test the model with the test images
         helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
 
         # OPTIONAL: Apply the trained model to a video
 
 
 if __name__ == '__main__':
-
-    image_shape = (160, 576)
-
-    print('Collecting Data')
-    train_img_list = process_data.getData(image_shape)
-    train_data, val_data = train_test_split(train_img_list, test_size=0.0)
-    print('Finished collecting Data')
-
-    run(image_shape, train_data, val_data)
+    run()
