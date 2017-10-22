@@ -15,15 +15,21 @@ The code requires the following to be installed:
  - [NumPy](http://www.numpy.org/)
  - [SciPy](https://www.scipy.org/)
 
-##### Dataset
-Download the [Kitti Road dataset](http://www.cvlibs.net/datasets/kitti/eval_road.php) from [here](http://www.cvlibs.net/download.php?file=data_road.zip).  Extract the dataset in the `data` folder.  This will create the folder `data_road` with all the training test images.
-
 ##### Build Instructions
 1. Clone this repo.
 
   ```sh
   $ git clone https://github.com/Heych88/udacity-sdcnd-Semantic-Segmentation.git
   ```
+2. Create a `model/` and `data/` folder in the cloned repository.
+
+  ```sh
+  $ cd <path to repository>/udacity-sdcnd-Semantic-Segmentation/
+  $ mkdir model data
+  ```
+
+##### Dataset
+Download the [Kitti Road dataset](http://www.cvlibs.net/datasets/kitti/eval_road.php) from [here](http://www.cvlibs.net/download.php?file=data_road.zip).  Extract the dataset in the `data/` folder.  This will create the folder `data_road` with all the training test images.
 
 ### Start
 ##### Run
