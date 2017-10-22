@@ -3,6 +3,7 @@ import os
 import numpy as np
 from pathlib import Path
 import pickle
+from tqdm import tqdm
 
 data_dir = r"./data/"  # location of all the data relative to the programs directory
 output_dir = data_dir + "processed_data/"
@@ -134,13 +135,12 @@ def getData(image_shape):
         print("Loading image data from ", saved_file_dir)
         address_list = pickle.load(open(saved_file_dir, "rb"))
     else:
+        print("Processing image data from ", saved_file_dir)
         gt_file_names = os.listdir(train_gt_dir)
         rows = image_shape[0]
         cols = image_shape[1]
 
-        for file_num, gt_file_name in enumerate(gt_file_names):
-            print("\rprocessing image {} of {}".format(file_num+1, len(gt_file_names)), end=' ')
-
+        for file_num, gt_file_name in enumerate(tqdm(gt_file_names)):
             # open and resize the ground truth label images
             img_path = train_gt_dir + gt_file_name
             gt_img = cv2.resize(cv2.imread(img_path, 0), (cols, rows))
